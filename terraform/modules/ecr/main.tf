@@ -20,14 +20,6 @@ resource "aws_ecr_repository" "services" {
       Service = each.value
     }
   )
-
-  lifecycle {
-    precondition {
-      condition     = can(regex("^[a-z0-9_-]+$", each.value))
-      error_message = "Repository name must contain only lowercase letters, numbers, hyphens, and underscores."
-    }
-    prevent_destroy = false
-  }
 }
 
 # ECR Lifecycle Policy to clean up old images

@@ -14,13 +14,6 @@ resource "aws_s3_bucket" "terraform_state" {
       Name = "${title(var.project_name)}-State"
     }
   )
-
-  lifecycle {
-    precondition {
-      condition     = length(local.bucket_name) <= 63
-      error_message = "S3 bucket name must be 63 characters or less."
-    }
-  }
 }
 
 # Enable versioning for state file
