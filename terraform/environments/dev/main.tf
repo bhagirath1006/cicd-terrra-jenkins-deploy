@@ -32,7 +32,9 @@ module "vpc" {
   tags = var.tags
 }
 
-# ECR Module
+# ECR Module - resources already exist, skipping creation
+# Uncomment after terraform import
+/*
 module "ecr" {
   source = "../../modules/ecr"
 
@@ -44,8 +46,11 @@ module "ecr" {
 
   tags = var.tags
 }
+*/
 
-# S3 Module
+# S3 Module - resources already exist, skipping creation
+# Uncomment after terraform import
+/*
 module "s3" {
   source = "../../modules/s3"
 
@@ -54,6 +59,7 @@ module "s3" {
 
   tags = var.tags
 }
+*/
 
 # EC2 Module (Bastion Host & App Instances)
 module "ec2" {
@@ -66,13 +72,13 @@ module "ec2" {
   private_subnet_ids  = module.vpc.private_subnet_ids
   instance_count      = var.instance_count
   instance_type       = var.instance_type
-  ecr_repository_urls = module.ecr.repository_urls
+  ecr_repository_urls = {} # ECR module disabled temporarily
   docker_services     = var.docker_services
   aws_region          = var.aws_region
 
   tags = var.tags
 
-  depends_on = [module.vpc, module.ecr]
+  depends_on = [module.vpc]
 }
 
 # CloudWatch Module
