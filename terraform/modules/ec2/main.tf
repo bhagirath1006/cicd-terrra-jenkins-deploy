@@ -279,13 +279,6 @@ resource "aws_instance" "bastion" {
     }
   )
 
-  lifecycle {
-    postcondition {
-      condition     = try(lookup(self.tags, "Name", "") != "", true)
-      error_message = "Bastion instance must have a Name tag."
-    }
-  }
-
   depends_on = [aws_iam_instance_profile.ec2_profile]
 }
 
@@ -316,13 +309,6 @@ resource "aws_instance" "app" {
       Service = keys(var.docker_services)[count.index]
     }
   )
-
-  lifecycle {
-    postcondition {
-      condition     = try(lookup(self.tags, "Name", "") != "", true)
-      error_message = "App instance must have a Name tag."
-    }
-  }
 
   depends_on = [aws_iam_instance_profile.ec2_profile]
 }

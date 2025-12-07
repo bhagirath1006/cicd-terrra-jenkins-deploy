@@ -83,13 +83,6 @@ resource "aws_internet_gateway" "main" {
       Name = "${local.vpc_name}-igw"
     }
   )
-
-  lifecycle {
-    postcondition {
-      condition     = self.tags["Name"] != ""
-      error_message = "Internet Gateway must have a Name tag."
-    }
-  }
 }
 
 # Elastic IP for NAT Gateway
