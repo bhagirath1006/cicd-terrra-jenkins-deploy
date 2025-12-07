@@ -281,7 +281,7 @@ resource "aws_instance" "bastion" {
 
   lifecycle {
     postcondition {
-      condition     = self.tags["Name"] != ""
+      condition     = try(lookup(self.tags, "Name", "") != "", true)
       error_message = "Bastion instance must have a Name tag."
     }
   }
@@ -319,7 +319,7 @@ resource "aws_instance" "app" {
 
   lifecycle {
     postcondition {
-      condition     = try(self.tags["Name"], "") != ""
+      condition     = try(lookup(self.tags, "Name", "") != "", true)
       error_message = "App instance must have a Name tag."
     }
   }
