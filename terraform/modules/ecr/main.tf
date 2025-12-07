@@ -55,10 +55,10 @@ resource "aws_ecr_lifecycle_policy" "cleanup" {
         rulePriority = 2
         description  = "Clean untagged images after 7 days"
         selection = {
-          tagStatus     = "untagged"
-          countType     = "sinceImagePushed"
-          countUnit     = "days"
-          countNumber   = 7
+          tagStatus   = "untagged"
+          countType   = "sinceImagePushed"
+          countUnit   = "days"
+          countNumber = 7
         }
         action = {
           type = "expire"

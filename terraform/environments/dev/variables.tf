@@ -23,8 +23,8 @@ variable "instance_count" {
   type        = number
   default     = 2
   validation {
-    condition     = var.instance_count > 0 && var.instance_count <= 10
-    error_message = "Instance count must be between 1 and 10."
+    condition     = var.instance_count > 0 && var.instance_count <= 15
+    error_message = "Instance count must be between 1 and 15."
   }
 }
 
@@ -63,7 +63,7 @@ variable "public_subnet_cidrs" {
 
 variable "docker_services" {
   description = "Docker services configuration"
-  type        = map(object({ port = number }))
+  type        = map(object({ port = number, index = number, instance = number }))
 }
 
 variable "tags" {

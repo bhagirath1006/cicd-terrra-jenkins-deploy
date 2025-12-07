@@ -97,7 +97,7 @@ resource "aws_cloudwatch_metric_alarm" "network_in" {
   namespace           = "AWS/EC2"
   period              = 300
   statistic           = "Sum"
-  threshold           = 5000000  # 5 MB
+  threshold           = 5000000 # 5 MB
   alarm_description   = "Alert when network in exceeds 5 MB for instance ${var.instance_ids[count.index]}"
   treat_missing_data  = "notBreaching"
 

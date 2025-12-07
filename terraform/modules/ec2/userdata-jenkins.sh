@@ -13,6 +13,10 @@ wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenki
 rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
 yum install -y jenkins
 
+# Start Jenkins
+systemctl start jenkins
+systemctl enable jenkins
+
 # Install Docker
 amazon-linux-extras install docker -y
 usermod -a -G docker jenkins
@@ -23,9 +27,7 @@ systemctl enable docker
 curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
 
-# Start Jenkins
-systemctl start jenkins
-systemctl enable jenkins
+
 
 # Create Jenkins configuration directory
 mkdir -p /var/lib/jenkins/init.groovy.d

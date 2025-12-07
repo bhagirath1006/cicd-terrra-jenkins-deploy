@@ -18,11 +18,6 @@ variable "public_subnets" {
   type        = list(string)
 }
 
-variable "private_subnets" {
-  description = "Private subnet CIDR blocks"
-  type        = list(string)
-}
-
 variable "tags" {
   description = "Tags to apply"
   type        = map(string)

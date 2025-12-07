@@ -42,7 +42,7 @@ variable "ecr_repository_urls" {
 
 variable "docker_services" {
   description = "Docker services configuration"
-  type        = map(object({ port = number, index = number }))
+  type        = map(object({ port = number, index = number, instance = number }))
 }
 
 variable "aws_region" {

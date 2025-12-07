@@ -28,12 +28,12 @@ provider "aws" {
 module "vpc" {
   source = "../../modules/vpc"
 
-  environment      = var.environment
-  project_name     = var.project_name
-  vpc_cidr         = var.vpc_cidr
+  environment     = var.environment
+  project_name    = var.project_name
+  vpc_cidr        = var.vpc_cidr
   public_subnets  = var.public_subnet_cidrs
   private_subnets = var.private_subnet_cidrs
-  
+
   tags = var.tags
 }
 
@@ -43,9 +43,9 @@ module "ecr" {
 
   environment  = var.environment
   project_name = var.project_name
-  
+
   repositories = keys(var.docker_services)
-  
+
   tags = var.tags
 }
 
@@ -55,7 +55,7 @@ module "s3" {
 
   environment  = var.environment
   project_name = var.project_name
-  
+
   tags = var.tags
 }
 
@@ -63,17 +63,17 @@ module "s3" {
 module "ec2" {
   source = "../../modules/ec2"
 
-  environment           = var.environment
-  project_name          = var.project_name
-  vpc_id                = module.vpc.vpc_id
-  public_subnet_id      = module.vpc.public_subnet_ids[0]
-  private_subnet_ids    = module.vpc.private_subnet_ids
-  instance_count        = var.instance_count
-  instance_type         = var.instance_type
-  ecr_repository_urls   = module.ecr.repository_urls
-  docker_services       = var.docker_services
-  aws_region            = var.aws_region
-  
+  environment         = var.environment
+  project_name        = var.project_name
+  vpc_id              = module.vpc.vpc_id
+  public_subnet_id    = module.vpc.public_subnet_ids[0]
+  private_subnet_ids  = module.vpc.private_subnet_ids
+  instance_count      = var.instance_count
+  instance_type       = var.instance_type
+  ecr_repository_urls = module.ecr.repository_urls
+  docker_services     = var.docker_services
+  aws_region          = var.aws_region
+
   tags = var.tags
 }
 
@@ -83,9 +83,9 @@ module "cloudwatch" {
 
   count = var.enable_cloudwatch ? 1 : 0
 
-  environment     = var.environment
-  project_name    = var.project_name
-  instance_ids    = module.ec2.instance_ids
-  
+  environment  = var.environment
+  project_name = var.project_name
+  instance_ids = module.ec2.instance_ids
+
   tags = var.tags
 }

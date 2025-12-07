@@ -3,7 +3,7 @@
 @Library('cicd-shared-library') _
 
 // ============================================================================
-// 15 MICROSERVICES - COMPACT CONFIGURATION
+// 15 MICROSERVICES - 
 // ============================================================================
 
 def getServiceConfig() {

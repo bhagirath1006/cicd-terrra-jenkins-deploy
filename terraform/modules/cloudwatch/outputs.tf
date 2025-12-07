@@ -21,4 +21,4 @@ output "alarm_names" {
   )
 }
 
-data "aws_region" "current" {}
+

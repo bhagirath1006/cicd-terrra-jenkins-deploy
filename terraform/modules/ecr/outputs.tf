@@ -17,4 +17,11 @@ output "registry_id" {
   value       = data.aws_caller_identity.current.account_id
 }
 
+output "registry_url" {
+  description = "ECR Registry URL"
+  value       = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com"
+}
+
 data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}

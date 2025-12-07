@@ -1,0 +1,75 @@
+# Terraform files
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars.json
+.terraform.lock.hcl
+tfplan
+terraform.tfstate
+terraform.tfstate.backup
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Local environment files
+.env
+.env.local
+*.tfvars
+!terraform.tfvars.example
+
+# Build/deployment outputs
+apply_output.txt
+destroy_output.log
+plan_output.txt
+outputs.json
+
+# Jenkins
+.gradle
+build/
+logs/
+*.pid
+
+# Docker
+.dockerignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Node modules (if any)
+node_modules/
+package-lock.json
+yarn.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv
+
+# OS files
+.DS_Store
+Thumbs.db
+*.bak
+*.swp
+
+# Temporary files
+*.tmp
+*.temp

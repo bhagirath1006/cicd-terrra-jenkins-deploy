@@ -5,6 +5,7 @@ on:
     branches: [ main, develop ]
     paths:
       - 'terraform/**'
+      - '.github/workflows/terraform-deploy.yml'
   pull_request:
     branches: [ main ]
   workflow_dispatch:

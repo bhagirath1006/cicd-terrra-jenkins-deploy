@@ -3,6 +3,23 @@ locals {
   vpc_name            = "${lower(var.project_name)}-vpc-${var.environment}"
   public_subnet_name  = "${title(var.project_name)}-Public-Subnet"
   private_subnet_name = "${title(var.project_name)}-Private-Subnet"
+  
+  # Dynamically generate 15 subnet CIDR blocks from VPC CIDR
+  # cidrsubnets() divides 10.0.0.0/16 into 15 /28 subnets (each with 16 IPs, 15 usable)
+  private_subnets = cidrsubnets(var.vpc_cidr, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)
+  
+  # Example output:
+  # 10.0.0.0/28, 10.0.0.16/28, 10.0.0.32/28, ... 10.0.0.224/28
+  # Each /28 = 16 IPs with 15 usable for EC2 instances
+}
+
+# Data source for availability zones - Filter to only supported zones for t3 instances
+data "aws_availability_zones" "available" {
+  state = "available"
+  filter {
+    name   = "zone-name"
+    values = ["us-east-1a", "us-east-1b", "us-east-1c", "us-east-1d", "us-east-1f"]
+  }
 }
 
 # VPC with preconditions
@@ -47,17 +64,17 @@ resource "aws_subnet" "public" {
   }
 }
 
-# Private Subnets with count meta-argument
+# Private Subnets with count meta-argument - 15 subnets for 15 instances
 resource "aws_subnet" "private" {
-  count             = length(var.private_subnets)
+  count             = 15
   vpc_id            = aws_vpc.main.id
-  cidr_block        = var.private_subnets[count.index]
+  cidr_block        = local.private_subnets[count.index]
   availability_zone = data.aws_availability_zones.available.names[count.index % length(data.aws_availability_zones.available.names)]
 
   tags = merge(
     var.tags,
     {
-      Name = "${local.private_subnet_name}-${count.index + 1}"
+      Name = "${local.private_subnet_name}-${count.index}"
       Type = "Private"
     }
   )
@@ -118,8 +135,8 @@ resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
 
   route {
-    cidr_block      = "0.0.0.0/0"
-    gateway_id      = aws_internet_gateway.main.id
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main.id
   }
 
   tags = merge(
@@ -137,9 +154,9 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-# Private Route Tables (one per NAT Gateway for redundancy)
+# Private Route Tables (one per NAT Gateway for redundancy - 15 subnets)
 resource "aws_route_table" "private" {
-  count  = length(var.private_subnets)
+  count  = 15
   vpc_id = aws_vpc.main.id
 
   route {
@@ -150,19 +167,14 @@ resource "aws_route_table" "private" {
   tags = merge(
     var.tags,
     {
-      Name = "${local.vpc_name}-private-rt-${count.index + 1}"
+      Name = "${local.vpc_name}-private-rt-${count.index}"
     }
   )
 }
 
-# Private Route Table Associations
+# Private Route Table Associations - 15 subnets to route tables
 resource "aws_route_table_association" "private" {
-  count          = length(aws_subnet.private)
+  count          = 15
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private[count.index].id
-}
-
-# Data source for availability zones
-data "aws_availability_zones" "available" {
-  state = "available"
 }

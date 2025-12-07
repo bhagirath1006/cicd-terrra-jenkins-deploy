@@ -5,6 +5,9 @@ on:
     branches: [ main, develop ]
     paths:
       - 'docker/**'
+      - '.github/workflows/docker-build.yml'
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 env:
@@ -16,7 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [nodejs-app, nginx-server, redis-cache, postgres-db, mongodb]
+        service: [
+          nodejs-api, python-flask-api, go-api, java-spring-boot, fastapi,
+          nginx-proxy, react-frontend, php-laravel, django, python-ml,
+          redis, mongodb, mysql, postgresql, rabbitmq, elasticsearch
+        ]
+      max-parallel: 5
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
