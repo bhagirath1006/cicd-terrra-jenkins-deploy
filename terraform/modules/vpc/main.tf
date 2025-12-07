@@ -3,11 +3,11 @@ locals {
   vpc_name            = "${lower(var.project_name)}-vpc-${var.environment}"
   public_subnet_name  = "${title(var.project_name)}-Public-Subnet"
   private_subnet_name = "${title(var.project_name)}-Private-Subnet"
-  
+
   # Dynamically generate 15 subnet CIDR blocks from VPC CIDR
   # cidrsubnets() divides 10.0.0.0/16 into 15 /28 subnets (each with 16 IPs, 15 usable)
   private_subnets = cidrsubnets(var.vpc_cidr, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12)
-  
+
   # Example output:
   # 10.0.0.0/28, 10.0.0.16/28, 10.0.0.32/28, ... 10.0.0.224/28
   # Each /28 = 16 IPs with 15 usable for EC2 instances

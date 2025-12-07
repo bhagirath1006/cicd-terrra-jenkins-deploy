@@ -8,7 +8,7 @@ enable_ecr        = true
 
 # VPC Configuration - 15 private subnets (one per instance)
 vpc_cidr             = "10.0.0.0/16"
-private_subnet_cidrs = []  # Handled in VPC module locals (15 /28 subnets)
+private_subnet_cidrs = [] # Handled in VPC module locals (15 /28 subnets)
 public_subnet_cidrs  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
 
 # 15 Docker Services - 1 per instance (15 instances × 1 subnet each = 15 IPs)

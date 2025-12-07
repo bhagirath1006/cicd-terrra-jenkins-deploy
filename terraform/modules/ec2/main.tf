@@ -315,34 +315,34 @@ resource "aws_instance" "app" {
 
 # Inter-service communication rules (avoid self-reference in security group)
 resource "aws_security_group_rule" "inter_service_tcp" {
-  type              = "ingress"
-  from_port         = 0
-  to_port           = 65535
-  protocol          = "tcp"
-  security_group_id = aws_security_group.app.id
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.app.id
   source_security_group_id = aws_security_group.app.id
-  description       = "inter-service-communication-tcp"
+  description              = "inter-service-communication-tcp"
 }
 
 resource "aws_security_group_rule" "inter_service_udp" {
-  type              = "ingress"
-  from_port         = 0
-  to_port           = 65535
-  protocol          = "udp"
-  security_group_id = aws_security_group.app.id
+  type                     = "ingress"
+  from_port                = 0
+  to_port                  = 65535
+  protocol                 = "udp"
+  security_group_id        = aws_security_group.app.id
   source_security_group_id = aws_security_group.app.id
-  description       = "inter-service-communication-udp"
+  description              = "inter-service-communication-udp"
 }
 
 # Dynamic security group rules for all docker services internal communication
 resource "aws_security_group_rule" "app_services" {
   for_each = var.docker_services
 
-  type              = "ingress"
-  from_port         = each.value.port
-  to_port           = each.value.port
-  protocol          = "tcp"
-  security_group_id = aws_security_group.app.id
+  type                     = "ingress"
+  from_port                = each.value.port
+  to_port                  = each.value.port
+  protocol                 = "tcp"
+  security_group_id        = aws_security_group.app.id
   source_security_group_id = aws_security_group.app.id
-  description       = "internal-${each.key}"
+  description              = "internal-${each.key}"
 }

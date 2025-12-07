@@ -81,9 +81,9 @@ module "cloudwatch" {
 
   count = var.enable_cloudwatch ? 1 : 0
 
-  environment     = var.environment
-  project_name    = var.project_name
-  instance_ids    = module.ec2.instance_ids
+  environment  = var.environment
+  project_name = var.project_name
+  instance_ids = module.ec2.instance_ids
 
   tags = var.tags
 }
