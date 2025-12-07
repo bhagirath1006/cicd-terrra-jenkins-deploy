@@ -1,0 +1,48 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'docker/**'
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  REGISTRY: ${{ secrets.ECR_REGISTRY }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service: [nodejs-app, nginx-server, redis-cache, postgres-db, mongodb]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        run: |
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
+          docker login --username AWS --password-stdin ${{ env.REGISTRY }}
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }} \
+                       -t ${{ env.REGISTRY }}/${{ matrix.service }}:latest \
+                       -f docker/${{ matrix.service }}/Dockerfile .
+
+      - name: Push to ECR
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ matrix.service }}:latest
+
+      - name: Image digest
+        run: echo ${{ env.REGISTRY }}/${{ matrix.service }}@${{ steps.docker_build.outputs.digest }}

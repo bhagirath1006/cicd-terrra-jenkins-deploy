@@ -1,0 +1,165 @@
+#!/usr/bin/env groovy
+
+@Library('cicd-shared-library') _
+
+// ============================================================================
+// 15 MICROSERVICES - COMPACT CONFIGURATION
+// ============================================================================
+
+def getServiceConfig() {
+    return [
+        apis: ['nodejs-api': [port: 3000, fw: 'nodejs'], 'python-flask-api': [port: 5000, fw: 'python'], 
+               'go-api': [port: 8080, fw: 'go'], 'java-spring-boot': [port: 8081, fw: 'java'], 
+               'fastapi': [port: 8002, fw: 'python']],
+        web: ['nginx-proxy': [port: 80, fw: 'nginx'], 'react-frontend': [port: 3001, fw: 'nodejs'], 
+              'php-laravel': [port: 9000, fw: 'php'], 'django': [port: 8000, fw: 'python']],
+        data: ['redis': [port: 6379, type: 'cache'], 'mongodb': [port: 27017, type: 'nosql'], 
+               'mysql': [port: 3306, type: 'sql'], 'postgresql': [port: 5432, type: 'sql']],
+        infra: ['rabbitmq': [port: 5672, type: 'queue'], 'elasticsearch': [port: 9200, type: 'search']]
+    ]
+}
+
+
+def getAll(Map c) { def s = [:]; c.each { cat, svcs -> s.putAll(svcs) }; return s }
+def getByCategory(String cat, Map c) { return c[cat]?.collect { k, v -> [name: k, config: v] } ?: [] }
+def getPort(String s, Map c) { for (cat in c.keySet()) { if (c[cat].containsKey(s)) return c[cat][s].port } }
+
+pipeline {
+    agent any
+    options { timestamps(); timeout(time: 4, unit: 'HOURS'); buildDiscarder(logRotator(numToKeepStr: '20')); disableConcurrentBuilds() }
+    
+    environment {
+        AWS_REGION = 'us-east-1'
+        AWS_ACCOUNT_ID = credentials('aws-account-id')
+        ECR = "\${AWS_ACCOUNT_ID}.dkr.ecr.\${AWS_REGION}.amazonaws.com"
+        BUILD = "\${BUILD_NUMBER}"
+        ENV = 'dev'
+    }
+
+    stages {
+        stage('🚀 Init') {
+            steps {
+                script {
+                    def cfg = getServiceConfig()
+                    def all = getAll(cfg)
+                    echo "════════════════════════════════════════════"
+                    echo "  Deploying ${all.size()} Services | Build #${BUILD}"
+                    echo "════════════════════════════════════════════"
+                }
+            }
+        }
+
+        stage('📥 Checkout') {
+            steps {
+                checkout scm
+                sh 'git log -1 --oneline'
+            }
+        }
+
+        stage('🔨 Build Parallel') {
+            steps {
+                script {
+                    def cfg = getServiceConfig()
+                    parallel(
+                        'APIs': { getByCategory('apis', cfg).each { s -> buildDockerImage(s.name, BUILD) } },
+                        'Web': { getByCategory('web', cfg).each { s -> buildDockerImage(s.name, BUILD) } },
+                        'Data': { getByCategory('data', cfg).each { s -> buildDockerImage(s.name, BUILD) } },
+                        'Infra': { getByCategory('infra', cfg).each { s -> buildDockerImage(s.name, BUILD) } }
+                    )
+                }
+            }
+        }
+
+        stage('🔐 Scan') {
+            steps {
+                script {
+                    def cfg = getServiceConfig()
+                    getAll(cfg).each { s, c -> scanForVulnerabilities("${s}:${BUILD}") }
+                    echo '✅ Scanning complete'
+                }
+            }
+        }
+
+        stage('📤 Push ECR') {
+            steps {
+                script {
+                    def cfg = getServiceConfig()
+                    withCredentials([aws(accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY', credentialsId: 'aws-credentials')]) {
+                        sh "aws ecr get-login-password --region \${AWS_REGION} | docker login --username AWS --password-stdin \${ECR}"
+                        getAll(cfg).each { s, c -> pushToECR(s, BUILD, ECR) }
+                    }
+                }
+            }
+        }
+
+        stage('📋 Terraform Plan') {
+            steps {
+                sh """
+                    cd terraform/environments/\${ENV}
+                    terraform init -upgrade && terraform validate && terraform plan -out=tfplan
+                """
+            }
+        }
+
+        stage('✅ Approval') {
+            when { branch 'main' }
+            steps { input 'Deploy?' }
+        }
+
+        stage('🏗️  Terraform Apply') {
+            when { branch 'main' }
+            steps {
+                sh """
+                    cd terraform/environments/\${ENV}
+                    terraform apply -auto-approve tfplan && terraform output -json > ../../../tf-out.json
+                """
+            }
+        }
+
+        stage('🚀 Deploy') {
+            when { branch 'main' }
+            steps {
+                script {
+                    def cfg = getServiceConfig()
+                    def idx = 0
+                    getAll(cfg).each { svc, cfg ->
+                        sh """
+                            IDS=\$(cat tf-out.json | jq -r '.app_instance_ids.value[]')
+                            ARR=(\$IDS)
+                            deployToInstance("\${ARR[${idx}]}", "\${ECR}/${svc}:\${BUILD}", "${svc}")
+                        """
+                        idx++
+                    }
+                    echo '✅ All deployed'
+                }
+            }
+        }
+
+        stage('❤️  Health Check') {
+            when { branch 'main' }
+            steps {
+                script {
+                    def cfg = getServiceConfig()
+                    getByCategory('apis', cfg).each { s -> healthCheckService(s.name, s.config.port as String) }
+                    echo '✅ Health checks passed'
+                }
+            }
+        }
+
+        stage('📊 Metrics') {
+            when { branch 'main' }
+            steps {
+                script {
+                    def cfg = getServiceConfig()
+                    getAll(cfg).each { s, c -> collectMetrics(s) }
+                }
+            }
+        }
+    }
+
+    post {
+        success { echo '✅ Pipeline success!' }
+        failure { echo '❌ Pipeline failed!' }
+        always { cleanWs() }
+    }
+}

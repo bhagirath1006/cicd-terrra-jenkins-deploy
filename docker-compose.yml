@@ -1,0 +1,250 @@
+version: '3.8'
+
+# Complete 15-Service Docker Compose Configuration
+# For local testing and development
+
+services:
+  # 1. Node.js API Server
+  nodejs-api:
+    build:
+      context: ./docker/nodejs-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - ENVIRONMENT=dev
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 2. Python Flask API
+  python-flask-api:
+    build:
+      context: ./docker/python-flask-api
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 3. Go API
+  go-api:
+    build:
+      context: ./docker/go-api
+    ports:
+      - "8080:8080"
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 4. Nginx Reverse Proxy
+  nginx-proxy:
+    build:
+      context: ./docker/nginx-server
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 5. React Frontend
+  react-frontend:
+    build:
+      context: ./docker/react-frontend
+    ports:
+      - "3001:3001"
+    restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 6. Redis Cache
+  redis:
+    build:
+      context: ./docker/redis-cache
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 7. MongoDB
+  mongodb:
+    build:
+      context: ./docker/mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: always
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.runCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 8. MySQL
+  mysql:
+    build:
+      context: ./docker/mysql
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_DATABASE=app_db
+      - MYSQL_ROOT_PASSWORD=changeme
+      - MYSQL_USER=app_user
+      - MYSQL_PASSWORD=changeme
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-u", "root", "-pchangeme"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 9. PostgreSQL
+  postgresql:
+    build:
+      context: ./docker/postgres-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=app_db
+      - POSTGRES_USER=app_user
+      - POSTGRES_PASSWORD=changeme
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "app_user"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 10. Java Spring Boot
+  java-spring-boot:
+    build:
+      context: ./docker/java-spring-boot
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 11. PHP Laravel
+  php-laravel:
+    build:
+      context: ./docker/php-laravel
+    ports:
+      - "9000:9000"
+    environment:
+      - APP_ENV=local
+    restart: always
+
+  # 12. Django
+  django:
+    build:
+      context: ./docker/django
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=true
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 13. FastAPI
+  fastapi:
+    build:
+      context: ./docker/fastapi
+    ports:
+      - "8002:8002"
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 14. RabbitMQ
+  rabbitmq:
+    build:
+      context: ./docker/rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: always
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 15. Elasticsearch
+  elasticsearch:
+    build:
+      context: ./docker/elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-s", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  redis_data:
+  mongo_data:
+  mysql_data:
+  postgres_data:
+  rabbitmq_data:
+  elasticsearch_data:
+
+networks:
+  default:
+    name: cicd-network
+    driver: bridge
