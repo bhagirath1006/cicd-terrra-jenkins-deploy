@@ -124,6 +124,10 @@ resource "aws_cloudwatch_log_group" "app_logs" {
       Name = "${title(var.project_name)}-AppLogs"
     }
   )
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # CloudWatch Log Group for system logs
@@ -137,6 +141,10 @@ resource "aws_cloudwatch_log_group" "system_logs" {
       Name = "${title(var.project_name)}-SystemLogs"
     }
   )
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 data "aws_region" "current" {}

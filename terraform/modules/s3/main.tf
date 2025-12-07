@@ -14,6 +14,10 @@ resource "aws_s3_bucket" "terraform_state" {
       Name = "${title(var.project_name)}-State"
     }
   )
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Enable versioning for state file
@@ -80,6 +84,10 @@ resource "aws_s3_bucket" "artifacts" {
       Type = "Application"
     }
   )
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Enable versioning for artifacts
@@ -123,6 +131,10 @@ resource "aws_s3_bucket" "logs" {
       Type = "Logging"
     }
   )
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Enable logging retention

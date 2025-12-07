@@ -20,6 +20,10 @@ resource "aws_ecr_repository" "services" {
       Service = each.value
     }
   )
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # ECR Lifecycle Policy to clean up old images
