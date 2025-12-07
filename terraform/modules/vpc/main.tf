@@ -34,13 +34,6 @@ resource "aws_vpc" "main" {
       Name = local.vpc_name
     }
   )
-
-  lifecycle {
-    precondition {
-      condition     = can(cidrhost(var.vpc_cidr, 0))
-      error_message = "VPC CIDR block must be a valid IPv4 CIDR."
-    }
-  }
 }
 
 # Public Subnets with count meta-argument
