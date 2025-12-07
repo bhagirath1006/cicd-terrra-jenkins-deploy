@@ -8,11 +8,11 @@ terraform {
   }
 
   backend "s3" {
-    bucket       = "cicd-terraform-state-bhagi"
-    key          = "dev/terraform.tfstate"
-    region       = "us-east-1"
-    encrypt      = true
-    use_lockfile = true
+    bucket = "cicd-terraform-state-bhagi"
+    key    = "dev/terraform.tfstate"
+    region = "us-east-1"
+    encrypt = true
+    dynamodb_table = "terraform-locks"
   }
 }
 
