@@ -41,6 +41,25 @@ aws ecr describe-repositories --region us-east-1 --query "repositories[0].reposi
 
 ## Workflows Overview
 
+### Docker Build Workflow (`docker-build.yml`)
+
+**Purpose:** Build and push all Docker images to AWS ECR
+
+**Trigger Events:**
+- ✅ Push to `docker/` folder on `main` or `develop` branch
+- ✅ Changes to `.github/workflows/docker-build.yml`
+- ✅ Manual trigger via `workflow_dispatch` (recommended!)
+- ✅ Pull requests to `main`
+
+**Services Built (16 total, max 5 parallel):**
+- nodejs-api, python-flask-api, go-api, java-spring-boot, fastapi
+- nginx-proxy, react-frontend, php-laravel, django, python-ml
+- redis, mongodb, mysql, postgresql, rabbitmq, elasticsearch
+
+**Timeline:** 5-10 minutes for all 16 images
+
+**Recommended Action:** Use manual trigger for fastest results
+
 ### Terraform Deploy Workflow (`terraform-deploy.yml`)
 
 **Trigger Events:**
@@ -166,14 +185,63 @@ Solution:
 ## Current Status
 
 ✅ Terraform deploy workflow ready
-✅ Docker build workflow updated for 15 services
-✅ Refactored add-on functionality enabled
+✅ Docker build workflow with 16 services
+✅ GitHub Actions configured and ready
 ⏳ Waiting for GitHub secrets configuration
+
+## 🚀 Quick Start: Running Docker Build Workflow
+
+### Step 1: Verify GitHub Secrets
+
+Go to: **GitHub Repository → Settings → Secrets and variables → Actions**
+
+Should have 3 secrets:
+- ✅ AWS_ACCESS_KEY_ID
+- ✅ AWS_SECRET_ACCESS_KEY  
+- ✅ ECR_REGISTRY
+
+If missing, add them now!
+
+### Step 2: Trigger Docker Build Workflow
+
+**Fastest Method - Manual Trigger:**
+
+1. Go to: **GitHub Repository → Actions**
+2. Click: **"Build and Push Docker Images"** workflow
+3. Click: **"Run workflow"** button
+4. Select branch: `main`
+5. Click: **"Run workflow"**
+
+**Automatic Method - Push to docker folder:**
+```bash
+git add docker/
+git commit -m "Build Docker images"
+git push origin main
+```
+
+### Step 3: Monitor Progress
+
+1. Go to: **GitHub Repository → Actions**
+2. Click the running workflow
+3. Watch as 16 services build in parallel (max 5 concurrent)
+4. Should complete in 5-10 minutes
+
+### Step 4: Verify Images in ECR
+
+```bash
+# List all ECR repositories
+aws ecr describe-repositories --region us-east-1 \
+  --query "repositories[*].repositoryName" --output table
+
+# Check specific service images
+aws ecr list-images --repository-name nodejs-api --region us-east-1
+```
 
 ## Next Steps
 
-1. Add AWS credentials to GitHub Secrets
-2. Push a test commit to trigger workflows
-3. Monitor Actions tab for execution
-4. Review logs for any errors
+1. ✅ Add AWS credentials to GitHub Secrets (if not done)
+2. ▶️ Trigger docker-build.yml workflow manually
+3. 📊 Monitor workflow execution in Actions tab
+4. ✅ Verify images are pushed to ECR
+5. 🚀 Deploy images using Jenkins pipeline
 
