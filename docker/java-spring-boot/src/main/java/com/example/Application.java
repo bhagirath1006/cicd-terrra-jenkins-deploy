@@ -1,26 +1,26 @@
 package com.example;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.sun.net.httpserver.HttpServer;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpExchange;
+import java.io.IOException;
+import java.net.InetSocketAddress;
 
-@SpringBootApplication
 public class Application {
-    public static void main(String[] args) {
-        SpringApplication.run(Application.class, args);
+    public static void main(String[] args) throws IOException {
+        HttpServer server = HttpServer.create(new InetSocketAddress(8081), 0);
+        server.createContext("/", new HttpHandler() {
+            @Override
+            public void handle(HttpExchange exchange) throws IOException {
+                String response = "Java API is running";
+                exchange.sendResponseHeaders(200, response.length());
+                exchange.getResponseBody().write(response.getBytes());
+                exchange.close();
+            }
+        });
+        server.setExecutor(null);
+        server.start();
+        System.out.println("Server started on port 8081");
     }
 }
 
-@RestController
-class ApiController {
-    @GetMapping("/")
-    public String home() {
-        return "Java Spring Boot API is running";
-    }
-
-    @GetMapping("/health")
-    public String health() {
-        return "OK";
-    }
-}
