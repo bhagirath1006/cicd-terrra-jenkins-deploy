@@ -17,9 +17,9 @@ jobs:
     strategy:
       matrix:
         service: [
-          nodejs-api, python-flask-api, go-api, java-spring-boot, fastapi,
-          nginx-proxy, react-frontend, php-laravel, django, python-ml,
-          redis, mongodb, mysql, postgresql, rabbitmq, elasticsearch
+          nodejs-app, python-flask-api, go-api, java-spring-boot, fastapi,
+          nginx-server, react-frontend, php-laravel, django, elasticsearch,
+          redis-cache, mongodb, mysql, postgres-db, rabbitmq
         ]
       max-parallel: 5
     steps:
