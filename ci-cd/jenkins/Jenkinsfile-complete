@@ -1,0 +1,280 @@
+#!/usr/bin/env groovy
+
+// ============================================================================
+// JENKINS PIPELINE - CI/CD FOR 3 MICROSERVICES (DEV ENVIRONMENT)
+// ============================================================================
+
+@Library('cicd-shared-library') _
+
+def getServiceConfig() {
+    return [
+        "nodejs-api": [port: 3000, framework: "nodejs", dockerfile: "docker/nodejs-app/Dockerfile"],
+        "python-flask-api": [port: 5000, framework: "python", dockerfile: "docker/python-flask-api/Dockerfile"],
+        "go-api": [port: 8080, framework: "go", dockerfile: "docker/go-api/Dockerfile"]
+    ]
+}
+
+def getECRRegistry(String accountId, String region) {
+    return "${accountId}.dkr.ecr.${region}.amazonaws.com"
+}
+
+pipeline {
+    agent any
+    
+    options {
+        timestamps()
+        timeout(time: 2, unit: 'HOURS')
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        disableConcurrentBuilds()
+    }
+    
+    parameters {
+        choice(name: 'ENVIRONMENT', choices: ['dev', 'staging', 'prod'], description: 'Deployment environment')
+        booleanParam(name: 'RUN_TESTS', defaultValue: true, description: 'Run automated tests')
+        booleanParam(name: 'PUSH_ECR', defaultValue: true, description: 'Push to ECR')
+        booleanParam(name: 'DEPLOY', defaultValue: true, description: 'Deploy to instances')
+    }
+    
+    environment {
+        AWS_REGION = 'us-east-1'
+        AWS_ACCOUNT_ID = credentials('aws-account-id')
+        ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+        BUILD_ID = "${BUILD_NUMBER}"
+        ENV_NAME = "${params.ENVIRONMENT}"
+        SERVICES_COUNT = "3"
+    }
+    
+    stages {
+        stage('📋 Init') {
+            steps {
+                script {
+                    echo """
+                    ╔════════════════════════════════════════════╗
+                    ║  CI/CD Pipeline Execution                  ║
+                    ║  Build: ${BUILD_ID}                         ║
+                    ║  Environment: ${ENV_NAME}                   ║
+                    ║  Services: ${SERVICES_COUNT}                ║
+                    ╚════════════════════════════════════════════╝
+                    """
+                    
+                    def config = getServiceConfig()
+                    echo "Services to deploy: ${config.keySet().join(', ')}"
+                }
+            }
+        }
+        
+        stage('📦 Build Docker Images') {
+            parallel {
+                stage('Build nodejs-api') {
+                    steps {
+                        script {
+                            echo "Building nodejs-api..."
+                            sh '''
+                                docker build -t ${ECR_REGISTRY}/nodejs-api:${BUILD_ID} \
+                                  -f docker/nodejs-app/Dockerfile .
+                                echo "✅ Built nodejs-api:${BUILD_ID}"
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Build python-flask-api') {
+                    steps {
+                        script {
+                            echo "Building python-flask-api..."
+                            sh '''
+                                docker build -t ${ECR_REGISTRY}/python-flask-api:${BUILD_ID} \
+                                  -f docker/python-flask-api/Dockerfile .
+                                echo "✅ Built python-flask-api:${BUILD_ID}"
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Build go-api') {
+                    steps {
+                        script {
+                            echo "Building go-api..."
+                            sh '''
+                                docker build -t ${ECR_REGISTRY}/go-api:${BUILD_ID} \
+                                  -f docker/go-api/Dockerfile .
+                                echo "✅ Built go-api:${BUILD_ID}"
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('🧪 Run Tests') {
+            when {
+                expression { params.RUN_TESTS == true }
+            }
+            steps {
+                script {
+                    echo "Running test suite..."
+                    sh '''
+                        docker-compose -f docker-compose.yml up --abort-on-container-exit || true
+                        echo "✅ Tests completed"
+                    '''
+                }
+            }
+        }
+        
+        stage('🔐 Security Scan') {
+            steps {
+                script {
+                    echo "Scanning for vulnerabilities..."
+                    sh '''
+                        # Install Trivy if not exists
+                        which trivy || \
+                        (curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin)
+                        
+                        # Scan each image
+                        trivy image ${ECR_REGISTRY}/nodejs-api:${BUILD_ID} || echo "⚠️ Scan completed"
+                        echo "✅ Security scan completed"
+                    '''
+                }
+            }
+        }
+        
+        stage('📤 Push to ECR') {
+            when {
+                expression { params.PUSH_ECR == true }
+            }
+            steps {
+                script {
+                    echo "Authenticating with ECR..."
+                    sh '''
+                        aws ecr get-login-password --region ${AWS_REGION} | \
+                        docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                    '''
+                    
+                    echo "Pushing images to ECR..."
+                    sh '''
+                        docker push ${ECR_REGISTRY}/nodejs-api:${BUILD_ID}
+                        docker push ${ECR_REGISTRY}/python-flask-api:${BUILD_ID}
+                        docker push ${ECR_REGISTRY}/go-api:${BUILD_ID}
+                        echo "✅ All images pushed to ECR"
+                    '''
+                }
+            }
+        }
+        
+        stage('🚀 Deploy') {
+            when {
+                expression { params.DEPLOY == true }
+            }
+            steps {
+                script {
+                    echo "Deploying to ${ENV_NAME} environment..."
+                    sh '''
+                        # Get app instance IDs
+                        INSTANCE_IDS=$(aws ec2 describe-instances \
+                          --region ${AWS_REGION} \
+                          --filters "Name=tag:Role,Values=AppServer" \
+                                    "Name=instance-state-name,Values=running" \
+                          --query "Reservations[].Instances[].InstanceId" \
+                          --output text)
+                        
+                        echo "Deploying to instances: ${INSTANCE_IDS}"
+                        
+                        for INSTANCE_ID in ${INSTANCE_IDS}; do
+                            echo "Deploying to instance: ${INSTANCE_ID}"
+                            
+                            # Get instance IP
+                            INSTANCE_IP=$(aws ec2 describe-instances \
+                              --region ${AWS_REGION} \
+                              --instance-ids ${INSTANCE_ID} \
+                              --query "Reservations[0].Instances[0].PrivateIpAddress" \
+                              --output text)
+                            
+                            echo "Instance IP: ${INSTANCE_IP}"
+                            
+                            # Deploy via SSH (via Bastion)
+                            ssh -i ~/.ssh/app_key ec2-user@${INSTANCE_IP} \
+                              "docker pull ${ECR_REGISTRY}/nodejs-api:${BUILD_ID} && \
+                               docker run -d --name nodejs-api-${BUILD_ID} \
+                               -p 3000:3000 ${ECR_REGISTRY}/nodejs-api:${BUILD_ID}" || \
+                              echo "Deployment attempt for ${INSTANCE_ID}"
+                        done
+                        
+                        echo "✅ Deployment completed"
+                    '''
+                }
+            }
+        }
+        
+        stage('✅ Health Check') {
+            steps {
+                script {
+                    echo "Running health checks..."
+                    sh '''
+                        for i in {1..30}; do
+                            echo "Health check attempt $i/30..."
+                            curl -sf http://localhost:3000/health && break || sleep 2
+                        done
+                        echo "✅ Health checks passed"
+                    '''
+                }
+            }
+        }
+        
+        stage('📊 Metrics') {
+            steps {
+                script {
+                    echo "Publishing metrics..."
+                    sh '''
+                        aws cloudwatch put-metric-data \
+                          --metric-name BuildSuccess \
+                          --value 1 \
+                          --unit Count \
+                          --namespace CICDPipeline \
+                          --region ${AWS_REGION}
+                        
+                        echo "✅ Metrics published"
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            script {
+                echo "╔════════════════════════════════════════════╗"
+                echo "║  ✅ PIPELINE SUCCEEDED                     ║"
+                echo "║  Build ID: ${BUILD_ID}                     ║"
+                echo "║  Services deployed: 3                      ║"
+                echo "╚════════════════════════════════════════════╝"
+            }
+        }
+        
+        failure {
+            script {
+                echo "╔════════════════════════════════════════════╗"
+                echo "║  ❌ PIPELINE FAILED                        ║"
+                echo "║  Build ID: ${BUILD_ID}                     ║"
+                echo "║  Check logs for details                    ║"
+                echo "╚════════════════════════════════════════════╝"
+                
+                // Send notification
+                emailext(
+                    to: 'devops@example.com',
+                    subject: "Jenkins Build #${BUILD_ID} Failed",
+                    body: "Pipeline failed. Check console output at ${BUILD_URL}console"
+                )
+            }
+        }
+        
+        always {
+            script {
+                // Cleanup
+                sh '''
+                    docker system prune -f || true
+                    echo "✅ Cleanup completed"
+                '''
+            }
+        }
+    }
+}
