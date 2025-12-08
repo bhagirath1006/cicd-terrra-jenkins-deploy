@@ -2,9 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir Django==4.2.7 djangorestframework==3.14.0 django-cors-headers==4.3.1 python-decouple==3.8 gunicorn==21.2.0 psycopg2-binary==2.9.9 requests==2.31.0 Werkzeug==2.3.7
 
 COPY . .
 
