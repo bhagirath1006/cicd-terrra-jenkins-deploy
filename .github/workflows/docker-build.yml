@@ -40,7 +40,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }} \
+          docker build --no-cache -t ${{ env.REGISTRY }}/${{ matrix.service }}:${{ github.sha }} \
                        -t ${{ env.REGISTRY }}/${{ matrix.service }}:latest \
                        -f docker/${{ matrix.service }}/Dockerfile .
 
