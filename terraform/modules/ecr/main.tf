@@ -28,9 +28,9 @@ resource "aws_ecr_repository" "services" {
 
 # ECR Lifecycle Policy to clean up old images
 resource "aws_ecr_lifecycle_policy" "cleanup" {
-  for_each = aws_ecr_repository.services
+  for_each = toset(var.repositories)
 
-  repository = each.value.name
+  repository = aws_ecr_repository.services[each.value].name
 
   policy = jsonencode({
     rules = [

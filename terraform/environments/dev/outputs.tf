@@ -23,15 +23,15 @@ output "app_instance_ids" {
   value       = module.ec2.instance_ids
 }
 
-# output "ecr_repository_urls" {
-#   description = "ECR repository URLs"
-#   value       = module.ecr.repository_urls
-# }
+output "ecr_repository_urls" {
+  description = "ECR repository URLs"
+  value       = module.ecr.repository_urls
+}
 
-# output "s3_bucket_name" {
-#   description = "S3 bucket name"
-#   value       = module.s3.bucket_name
-# }
+output "s3_bucket_name" {
+  description = "S3 bucket name"
+  value       = module.s3.bucket_name
+}
 
 output "cloudwatch_dashboard_url" {
   description = "CloudWatch dashboard URL"

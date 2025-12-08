@@ -3,8 +3,8 @@ environment       = "dev"
 project_name      = "cicd-pipeline"
 instance_count    = 15
 instance_type     = "t3.medium"
-enable_cloudwatch = false
-enable_ecr        = false
+enable_cloudwatch = true
+enable_ecr        = true
 
 # VPC Configuration - 15 private subnets (one per instance)
 vpc_cidr             = "10.0.0.0/16"
