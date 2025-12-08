@@ -1,0 +1,158 @@
+pipeline {
+    agent any
+    
+    environment {
+        AWS_REGION = 'us-east-1'
+        ECR_REGISTRY = credentials('ECR_REGISTRY')
+        AWS_CREDENTIALS = credentials('aws-credentials')
+        PRIVATE_KEY = credentials('private-key')
+        APP_INSTANCES = 'i-xxxxxx,i-xxxxxx,i-xxxxxx,i-xxxxxx,i-xxxxxx,i-xxxxxx,i-xxxxxx,i-xxxxxx,i-xxxxxx,i-xxxxxx,i-xxxxxx'
+    }
+    
+    parameters {
+        choice(name: 'SERVICE', choices: [
+            'all',
+            'nodejs-app',
+            'python-flask-api',
+            'go-api',
+            'java-spring-boot',
+            'fastapi',
+            'nginx-server',
+            'react-frontend',
+            'php-laravel',
+            'django',
+            'elasticsearch',
+            'redis-cache',
+            'mongodb',
+            'mysql',
+            'postgres-db',
+            'rabbitmq'
+        ], description: 'Select service to deploy')
+        
+        string(name: 'IMAGE_TAG', defaultValue: 'latest', description: 'Docker image tag to deploy')
+    }
+    
+    stages {
+        stage('Validate Credentials') {
+            steps {
+                script {
+                    echo "✓ Checking AWS credentials..."
+                    sh '''
+                        aws sts get-caller-identity --region ${AWS_REGION}
+                        echo "✓ AWS credentials valid"
+                    '''
+                }
+            }
+        }
+        
+        stage('Get EC2 Instances') {
+            steps {
+                script {
+                    echo "✓ Fetching EC2 instance IPs..."
+                    sh '''
+                        aws ec2 describe-instances \
+                            --filters "Name=tag:Name,Values=app-instance" "Name=instance-state-name,Values=running" \
+                            --region ${AWS_REGION} \
+                            --query 'Reservations[*].Instances[*].[InstanceId,PrivateIpAddress]' \
+                            --output text > instances.txt
+                        cat instances.txt
+                    '''
+                }
+            }
+        }
+        
+        stage('Deploy Services') {
+            steps {
+                script {
+                    def services = params.SERVICE == 'all' ? 
+                        ['nodejs-app','python-flask-api','go-api','java-spring-boot','fastapi',
+                         'nginx-server','react-frontend','php-laravel','django','elasticsearch',
+                         'redis-cache','mongodb','mysql','postgres-db','rabbitmq'] :
+                        [params.SERVICE]
+                    
+                    for (service in services) {
+                        stage("Deploy ${service}") {
+                            echo "🚀 Deploying ${service}:${params.IMAGE_TAG}..."
+                            sh '''
+                                while IFS= read -r instance_id private_ip; do
+                                    echo "Deploying to ${instance_id} (${private_ip})..."
+                                    
+                                    # SSH to instance and pull/run Docker image
+                                    ssh -i ${PRIVATE_KEY} \
+                                        -o StrictHostKeyChecking=no \
+                                        -o UserKnownHostsFile=/dev/null \
+                                        ec2-user@${private_ip} <<'ENDSSH'
+                                        
+                                        # Login to ECR
+                                        aws ecr get-login-password --region ${AWS_REGION} | \
+                                        docker login --username AWS --password-stdin ${ECR_REGISTRY}
+                                        
+                                        # Pull latest image
+                                        docker pull ${ECR_REGISTRY}/${SERVICE}:${IMAGE_TAG}
+                                        
+                                        # Stop old container if exists
+                                        docker stop ${SERVICE} 2>/dev/null || true
+                                        docker rm ${SERVICE} 2>/dev/null || true
+                                        
+                                        # Run new container
+                                        docker run -d \
+                                            --name ${SERVICE} \
+                                            --restart always \
+                                            -p 80:80 -p 443:443 \
+                                            -p 3000:3000 -p 5000:5000 -p 8000:8000 -p 8080:8080 -p 8081:8081 -p 8002:8002 \
+                                            -p 3001:3001 -p 9000:9000 -p 9200:9200 -p 6379:6379 -p 27017:27017 \
+                                            -p 3306:3306 -p 5432:5432 -p 5672:5672 \
+                                            ${ECR_REGISTRY}/${SERVICE}:${IMAGE_TAG}
+                                        
+                                        echo "✓ ${SERVICE} deployed successfully"
+ENDSSH
+                                done < instances.txt
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+        
+        stage('Health Check') {
+            steps {
+                script {
+                    echo "✓ Verifying deployed services..."
+                    sh '''
+                        while IFS= read -r instance_id private_ip; do
+                            echo "Checking services on ${private_ip}..."
+                            
+                            ssh -i ${PRIVATE_KEY} \
+                                -o StrictHostKeyChecking=no \
+                                -o UserKnownHostsFile=/dev/null \
+                                ec2-user@${private_ip} <<'ENDSSH'
+                                
+                                # Check running containers
+                                echo "Running containers:"
+                                docker ps --format "table {{.Names}}\t{{.Status}}"
+                                
+                                # Check container health
+                                docker ps --format "{{.Names}}" | while read container; do
+                                    status=$(docker inspect --format='{{.State.Health.Status}}' $container 2>/dev/null || echo "unknown")
+                                    echo "  $container: $status"
+                                done
+ENDSSH
+                        done < instances.txt
+                    '''
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "✅ Deployment completed successfully!"
+        }
+        failure {
+            echo "❌ Deployment failed. Check logs above."
+        }
+        cleanup {
+            sh 'rm -f instances.txt'
+        }
+    }
+}
