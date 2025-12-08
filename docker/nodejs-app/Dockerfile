@@ -11,7 +11,7 @@ RUN printf 'const express = require("express");\nconst app = express();\napp.get
 # Create healthcheck.js
 RUN printf 'const http = require("http");\nconst req = http.request({hostname: "localhost", port: 3000, path: "/health", method: "GET"}, (res) => {\n  if (res.statusCode === 200) process.exit(0);\n  else process.exit(1);\n});\nreq.on("error", () => process.exit(1));\nreq.end();\n' > healthcheck.js
 
-RUN npm ci --only=production
+RUN npm install --production
 
 EXPOSE 3000
 

@@ -5,7 +5,7 @@ WORKDIR /app
 # Create package.json
 RUN printf '{\n  "name": "react-frontend",\n  "version": "1.0.0",\n  "scripts": {"start": "react-scripts start", "build": "react-scripts build"},\n  "dependencies": {"react": "^18.2.0", "react-dom": "^18.2.0", "react-scripts": "5.0.1"}\n}\n' > package.json
 
-RUN npm ci
+RUN npm install
 
 # Create minimal app structure
 RUN mkdir -p public src && \
