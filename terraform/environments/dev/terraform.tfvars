@@ -1,7 +1,7 @@
 aws_region        = "us-east-1"
 environment       = "dev"
 project_name      = "cicd-pipeline"
-instance_count    = 13  # Match available subnets (15 total - 2 in us-east-1e which doesn't support t3.medium)
+instance_count    = 13 # Match available subnets (15 total - 2 in us-east-1e which doesn't support t3.medium)
 instance_type     = "t3.medium"
 enable_cloudwatch = false
 enable_ecr        = false

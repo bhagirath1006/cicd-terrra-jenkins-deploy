@@ -3,7 +3,7 @@
 
 # Get existing VPC - use specific VPC ID
 data "aws_vpc" "main" {
-  id = "vpc-056f906bb48cd8e09"  # Specific VPC for cicd-pipeline
+  id = "vpc-056f906bb48cd8e09" # Specific VPC for cicd-pipeline
 }
 
 # Get existing public subnets
