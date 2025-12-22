@@ -37,7 +37,7 @@ pipeline {
     }
 
     stages {
-        stage('🚀 Init') {
+        stage(' Init') {
             steps {
                 script {
                     def cfg = getServiceConfig()
@@ -49,14 +49,14 @@ pipeline {
             }
         }
 
-        stage('📥 Checkout') {
+        stage(' Checkout') {
             steps {
                 checkout scm
                 sh 'git log -1 --oneline'
             }
         }
 
-        stage('🔨 Build Parallel') {
+        stage(' Build Parallel') {
             steps {
                 script {
                     def cfg = getServiceConfig()
@@ -70,17 +70,17 @@ pipeline {
             }
         }
 
-        stage('🔐 Scan') {
+        stage(' Scan') {
             steps {
                 script {
                     def cfg = getServiceConfig()
                     getAll(cfg).each { s, c -> scanForVulnerabilities("${s}:${BUILD}") }
-                    echo '✅ Scanning complete'
+                    echo ' Scanning complete'
                 }
             }
         }
 
-        stage('📤 Push ECR') {
+        stage('Push ECR') {
             steps {
                 script {
                     def cfg = getServiceConfig()
@@ -92,7 +92,7 @@ pipeline {
             }
         }
 
-        stage('📋 Terraform Plan') {
+        stage(' Terraform Plan') {
             steps {
                 sh """
                     cd terraform/environments/\${ENV}
@@ -101,12 +101,12 @@ pipeline {
             }
         }
 
-        stage('✅ Approval') {
+        stage(' Approval') {
             when { branch 'main' }
             steps { input 'Deploy?' }
         }
 
-        stage('🏗️  Terraform Apply') {
+        stage('  Terraform Apply') {
             when { branch 'main' }
             steps {
                 sh """
@@ -116,7 +116,7 @@ pipeline {
             }
         }
 
-        stage('🚀 Deploy') {
+        stage(' Deploy') {
             when { branch 'main' }
             steps {
                 script {
@@ -130,23 +130,23 @@ pipeline {
                         """
                         idx++
                     }
-                    echo '✅ All deployed'
+                    echo 'All deployed'
                 }
             }
         }
 
-        stage('❤️  Health Check') {
+        stage('  Health Check') {
             when { branch 'main' }
             steps {
                 script {
                     def cfg = getServiceConfig()
                     getByCategory('apis', cfg).each { s -> healthCheckService(s.name, s.config.port as String) }
-                    echo '✅ Health checks passed'
+                    echo ' Health checks passed'
                 }
             }
         }
 
-        stage('📊 Metrics') {
+        stage(' Metrics') {
             when { branch 'main' }
             steps {
                 script {
@@ -158,8 +158,9 @@ pipeline {
     }
 
     post {
-        success { echo '✅ Pipeline success!' }
-        failure { echo '❌ Pipeline failed!' }
+        success { echo ' Pipeline success!' }
+        failure { echo ' Pipeline failed!' }
         always { cleanWs() }
     }
 }
+
